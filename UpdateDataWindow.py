@@ -1,18 +1,18 @@
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 from WarningWindow import WarningEmptyFieldWindow
-import delete_data_window
+import update_data_window
 import query
 import preparation_data
 
 
-class DeleteDataWindow(QtWidgets.QMainWindow, delete_data_window.Ui_MainWindow):
+class UpdateDataWindow(QtWidgets.QMainWindow, update_data_window.Ui_MainWindow):
 
     def __init__(self, window, connection):
-        super().__init__()
+        super(UpdateDataWindow, self).__init__()
         self.setupUi(self)
         self.conn = connection
         self.cursor = self.conn.cursor()
-        self.OkButton.clicked.connect(self.delete_data)
+        self.OkButton.clicked.connect(self.update_data)
         self.ExitButton.clicked.connect(self.close)
         self.main_window = window
         self.warning_window = WarningEmptyFieldWindow()
@@ -20,25 +20,28 @@ class DeleteDataWindow(QtWidgets.QMainWindow, delete_data_window.Ui_MainWindow):
 
     def update_window(self, table):
         self.table = table
-        self.DeleteDataBox.clear()
+        self.UpdateDataBox.clear()
+        self.UpdateDataEdit.clear()
         data = query.select(table=self.table, columns='*', connection=self.conn)
         data = data[data.iloc[:, 1] != '']
-        self.DeleteDataBox.addItems([''] + list(data.iloc[:, 1].drop_duplicates().values))
+        self.UpdateDataBox.addItems([''] + list(data.iloc[:, 1].drop_duplicates().values))
         table_text_dict = {'surnames': 'фамилию', 'names': 'имя', 'streets': 'улицу', 'middle_names': 'отчество'}
-        text = f'Выберите {table_text_dict[table]} для удаления*'
+        text = f'Выберите {table_text_dict[table]} и введите новые данные*'
         self.label.setText(text)
 
-    def delete_data(self):
+    def update_data(self):
         try:
-            data = preparation_data.get_text_from_box_w(self.DeleteDataBox)
+            current_value = preparation_data.get_text_from_box_w(self.UpdateDataBox)
+            new_value = preparation_data.get_text_from_edit_w(self.UpdateDataEdit)
         except ValueError:
             self.warning_window.show()
             return 0
         column = self.table[:-1] + '_value'
-
-        condition = f"{column} = '{data}'"
+        new_values = f"{column} = '{new_value}'"
+        condition = f"{column} = '{current_value}'"
         try:
-            query.delete(table=self.table, condition=condition, cursor=self.cursor, connection=self.conn)
+            query.update(table=self.table, new_values=new_values, condition=condition, cursor=self.cursor,
+                         connection=self.conn)
         except Exception as err:
             print(err)
         self.main_window.update_combo_box()
