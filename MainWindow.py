@@ -3,6 +3,8 @@ from AddDataWindow import AddDataWindow
 from DeleteDataWindow import DeleteDataWindow
 from UpdateDataWindow import UpdateDataWindow
 from WarningWindow import WarningEmptyFieldWindow
+from UpdateDataWithTable import UpdateDataWithTableWindow
+from UpdateDataWithoutTable import UpdateDataWithoutTableWindow
 import main_window
 import query
 import pyodbc
@@ -21,6 +23,8 @@ class MainWindow(QtWidgets.QMainWindow, main_window.Ui_MainWindow):
         self.add_window = AddDataWindow(window=self, connection=self.conn)
         self.delete_window = DeleteDataWindow(window=self, connection=self.conn)
         self.update_window = UpdateDataWindow(window=self, connection=self.conn)
+        self.update_data_with_table_window = UpdateDataWithTableWindow(window=self, connection=self.conn)
+        self.update_data_without_table_window = UpdateDataWithoutTableWindow(window=self, connection=self.conn)
         self.warning_window = WarningEmptyFieldWindow()
 
         self.FindButton.clicked.connect(self.find_function)
@@ -58,7 +62,23 @@ class MainWindow(QtWidgets.QMainWindow, main_window.Ui_MainWindow):
         self.update_window.show()
 
     def update_function(self):
-        pass
+        try:
+            row = self.tableWidget.currentRow()
+            id_value = self.tableWidget.item(row, 0).text()
+            col = self.tableWidget.currentColumn()
+            item = self.tableWidget.currentItem().text()
+            columns_with_table = {1 : 'name_value', 2: 'surname_value', 3: 'middle_name_value', 4: 'street_value'}
+            columns_without_table = {5 : 'house', 6: 'apartment', 7: 'corp', 8: 'telephone'}
+            if col in columns_with_table.keys():
+                column = columns_with_table[col]
+                self.update_data_with_table_window.update_window(column=column, value=item, id_value=id_value)
+                self.update_data_with_table_window.show()
+            if col in columns_without_table.keys():
+                column = columns_without_table[col]
+                self.update_data_without_table_window.update_window(column=column, value=item, id_value=id_value)
+                self.update_data_without_table_window.show()
+        except Exception as err:
+            print(err)
 
     def find_function(self):
         data = self._get_data()
@@ -71,21 +91,32 @@ class MainWindow(QtWidgets.QMainWindow, main_window.Ui_MainWindow):
         corpus = int(self.CorpusEdit.text()) if len(self.CorpusEdit.text()) > 0 else 'NULL'
         apartment = int(self.ApartamentEdit.text()) if len(self.ApartamentEdit.text()) > 0 else 'NULL'
         box_text_list = [name, surname, middle_name, street, house, apartment, corpus, telephone]
-        columns_name = list(data.columns)
-        query_text = ''
+        columns_name = list(data.columns[1:])
+        condition = ''
         for col_name, box_text in zip(columns_name, box_text_list):
             if box_text is '' or box_text is 'NULL':
                 continue
             else:
                 if type(box_text) is str:
-                    query_part = f"({col_name} == '{box_text}')"
+                    if col_name == 'telephone':
+                        condition_part = f"({col_name} like '%{box_text}%')"
+                    else:
+                        condition_part = f"({col_name} = '{box_text}')"
                 else:
-                    query_part = f"({col_name} == {box_text})"
-                query_text += query_part + '&'
-        if len(query_text) > 0:
-            target_data = data.query(query_text[:-1])
+                    condition_part = f"({col_name} = {box_text})"
+                condition += condition_part + 'and'
+        condition = condition[:-3]
+        table = """ main
+                            join names on main.name = names.name_id
+                            join surnames on main.surname = surnames.surname_id
+                            join middle_names on main.middle_name = middle_names.middle_name_id
+                            join streets on main.street = streets.street_id
+                        """
+        columns = """main.id, name_value, surname_value, middle_name_value, street_value, house, apartment,corp, telephone"""
+        if len(condition) > 0:
+             target_data = query.select(table=table, columns=columns, condition=condition, connection=self.conn)
         else:
-            target_data = data
+             target_data = data
         self._view_table(target_data)
 
     def add_function(self):
@@ -103,35 +134,27 @@ class MainWindow(QtWidgets.QMainWindow, main_window.Ui_MainWindow):
             return 0
         try:
             surnames = query.select(table='surnames', columns='*', connection=self.conn)
-            surname_id = surnames[surnames.surname_value == surname].surname_id.values[0]
+            surname_id = surnames[surnames.surname_value == surname].surname_id.values[-1]
             names = query.select(table='names', columns='*', connection=self.conn)
-            name_id = names[names.name_value == name].name_id.values[0]
+            name_id = names[names.name_value == name].name_id.values[-1]
             middle_names = query.select(table='middle_names', columns='*', connection=self.conn)
-            middle_name_id = middle_names[middle_names.middle_name_value == middle_name].middle_name_id.values[0]
+            middle_name_id = middle_names[middle_names.middle_name_value == middle_name].middle_name_id.values[-1]
             streets = query.select(table='streets', columns='*', connection=self.conn)
-            street_id = streets[streets.street_value == street].street_id.values[0]
+            street_id = streets[streets.street_value == street].street_id.values[-1]
             query.insert(table='main (id, surname, name, middle_name, street, house, corp, apartment, telephone)',
                          values=f"""(default, {surname_id}, {name_id}, {middle_name_id}, {street_id}, {house}, {corpus}, {apartment},{telephone})""",
                          cursor=self.cursor,
                          connection=self.conn)
         except Exception as err:
             print(err)
+        data = self._get_data()
+        self._view_table(data)
 
     def delete_function(self):
         try:
             row = self.tableWidget.currentRow()
-            items = [self.tableWidget.item(row, col).text() for col in range(0, 8)]
-            name_id = query.select(table='names', columns='name_id', condition=f"name_value = '{items[0]}'", connection=self.conn).values[0,0]
-            surname_id = query.select(table='surnames', columns='surname_id', condition=f"surname_value = '{items[1]}'", connection=self.conn).values[0,0]
-            middle_name_id = query.select(table='middle_names', columns='middle_name_id', condition=f"middle_name_value = '{items[2]}'", connection=self.conn).values[0,0]
-            street_id = query.select(table='streets', columns='street_id', condition=f"street_value = '{items[3]}'", connection=self.conn).values[0,0]
-            house = int(items[4]) if items[4] is not '' else 'NULL'
-            apartment = int(items[5]) if items[5] is not '' else 'NULL'
-            corp = int(items[6]) if items[6] is not '' else 'NULL'
-            telephone = items[7]
-            condition = f"""name = {name_id} and surname = {surname_id} and middle_name = {middle_name_id}
-                            and street = {street_id} and house = {house} and corp = {corp}
-                            and apartment = {apartment} and telephone = '{telephone}' """
+            id_value = int(self.tableWidget.item(row, 0).text())
+            condition = f"id = {id_value}"
             query.delete(table='main', condition=condition, cursor=self.cursor, connection=self.conn)
             data = self._get_data()
             self._view_table(data)
@@ -173,7 +196,7 @@ class MainWindow(QtWidgets.QMainWindow, main_window.Ui_MainWindow):
                     join middle_names on main.middle_name = middle_names.middle_name_id
                     join streets on main.street = streets.street_id
                 """
-        columns = """name_value, surname_value, middle_name_value, street_value, house, apartment,corp, telephone"""
+        columns = """main.id, name_value, surname_value, middle_name_value, street_value, house, apartment,corp, telephone"""
         data = query.select(table, columns, self.conn)
         data.drop_duplicates(subset=['telephone'], inplace=True)
 
@@ -185,6 +208,6 @@ class MainWindow(QtWidgets.QMainWindow, main_window.Ui_MainWindow):
         self.tableWidget.setRowCount(0)
         for n, row in zip(range(0, data.shape[0]), data.values):
             self.tableWidget.insertRow(self.tableWidget.rowCount())
-            for m in range(0, 8):
+            for m in range(0, 9):
                 item = QtWidgets.QTableWidgetItem(str(row[m]))
                 self.tableWidget.setItem(int(n), int(m), item)

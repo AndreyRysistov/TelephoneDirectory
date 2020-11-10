@@ -14,6 +14,14 @@ def get_text_from_box_w(box):
         raise ValueError
 
 
+def get_text_from_label_w(label):
+    text = label.text()
+    if len(text) > 0:
+        return text
+    else:
+        raise ValueError
+
+
 def get_text_from_edit(edit):
     text = edit.text()
     if len(text) > 0:
