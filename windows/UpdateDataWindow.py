@@ -1,11 +1,10 @@
-from PyQt5 import QtWidgets, QtCore
-from WarningWindow import WarningEmptyFieldWindow
-import update_data_window
-import query
-import preparation_data
+from PyQt5 import QtWidgets
+from windows.WarningWindow import WarningEmptyFieldWindow
+from base_windows import update_data_w_2
+from utils import preparation_data, query
 
 
-class UpdateDataWindow(QtWidgets.QMainWindow, update_data_window.Ui_MainWindow):
+class UpdateDataWindow(QtWidgets.QMainWindow, update_data_w_2.Ui_MainWindow):
 
     def __init__(self, window, connection):
         super(UpdateDataWindow, self).__init__()

@@ -1,7 +1,5 @@
-import numpy as np
 import pandas as pd
-
-from preparation_data import remove_spaces
+from utils.preparation_data import remove_spaces
 
 
 def insert(table, values, cursor, connection):

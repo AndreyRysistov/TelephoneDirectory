@@ -1,11 +1,10 @@
 from PyQt5 import QtWidgets
-from WarningWindow import WarningEmptyFieldWindow
-import delete_data_window
-import query
-import preparation_data
+from windows.WarningWindow import WarningEmptyFieldWindow
+from base_windows import delete_data_w
+from utils import preparation_data, query
 
 
-class DeleteDataWindow(QtWidgets.QMainWindow, delete_data_window.Ui_MainWindow):
+class DeleteDataWindow(QtWidgets.QMainWindow, delete_data_w.Ui_MainWindow):
 
     def __init__(self, window, connection):
         super().__init__()

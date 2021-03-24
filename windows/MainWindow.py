@@ -1,14 +1,13 @@
 from PyQt5 import QtWidgets
-from AddDataWindow import AddDataWindow
-from DeleteDataWindow import DeleteDataWindow
-from UpdateDataWindow import UpdateDataWindow
-from WarningWindow import WarningEmptyFieldWindow
-from UpdateDataWithTable import UpdateDataWithTableWindow
-from UpdateDataWithoutTable import UpdateDataWithoutTableWindow
-import main_window
-import query
+from windows.AddDataWindow import AddDataWindow
+from windows.DeleteDataWindow import DeleteDataWindow
+from windows.UpdateDataWindow import UpdateDataWindow
+from windows.WarningWindow import WarningEmptyFieldWindow
+from windows.UpdateDataWithTable import UpdateDataWithTableWindow
+from windows.UpdateDataWithoutTable import UpdateDataWithoutTableWindow
+from base_windows import main_window
 import pyodbc
-import preparation_data
+from utils import preparation_data, query
 
 
 class MainWindow(QtWidgets.QMainWindow, main_window.Ui_MainWindow):
