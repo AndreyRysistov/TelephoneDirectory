@@ -1,8 +1,8 @@
 from PyQt5 import QtWidgets
-import warning_empty_fields_widget
+from widgets import WarningEmptyWidget
 
 
-class WarningEmptyFieldWindow(QtWidgets.QDialog, warning_empty_fields_widget.Ui_Dialog):
+class WarningEmptyFieldWindow(QtWidgets.QDialog, WarningEmptyWidget.Ui_Dialog):
 
     def __init__(self):
         super(WarningEmptyFieldWindow, self).__init__()
